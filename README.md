@@ -1,1 +1,1 @@
-##Map-Mod-Manager
+Map-Mod-Manager
