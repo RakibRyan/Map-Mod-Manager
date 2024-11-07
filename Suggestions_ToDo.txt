@@ -1,0 +1,11 @@
+SUGGESTIONS
+Filter maps that work with what you already have
+Legend for the colours
+Select a cell/s and show the maps for them
+Sort based on number of cells taken up by the map
+Improve UI
+
+TO-DO
+Fix Constown (multiple maps within mod)
+Fix 10yrs later eerie / lake ivy (code already updated in database)
+Add restore utilities / walking dead maps
