@@ -20,7 +20,7 @@
 
         local buttonY = MainScreen.instance.bottomPanel:getHeight() - 80
 
-        local button = ISButton:new(-4, buttonY, 475, 45, "MAP MOD MANAGER", nil, function()
+        local button = ISButton:new(-4, buttonY, 182, 42, "MAP MOD MANAGER", nil, function()
             local ui = MapModChecker_UI:new(0, 0, getCore():getScreenWidth(), getCore():getScreenHeight())
             ui:initialise()
             ui:addToUIManager()
@@ -42,7 +42,7 @@
             self.title = originalTitle
         
             local textX = 2
-            local textY = (tonumber(self.height) or 40 - (tonumber(self.fontHgt) or 20)) / 2 - 15
+            local textY = (tonumber(self.height) or 40 - (tonumber(self.fontHgt) or 20)) / 2 - 15 + 2
             self:drawText(self.title, textX, textY, 1, 1, 1, 1, self.font)
         end
 
@@ -81,6 +81,7 @@
     function MapModChecker_UI:initialise()
         ISPanel.initialise(self)
         self.selectedMaps = {}
+        self.panelsVisible = true
         self:createChildren()
         populateTempModList()
         self:updateDependencies()
@@ -98,14 +99,15 @@
         self:addToUIManager()
     end
 
-
 -- Render UI --
     function MapModChecker_UI:render()
         self:renderOverlay()
         self:renderTooltip()
-        self:renderAllMapModsPanel()
-        self:renderActiveMapModsPanel()
-        self:renderDependenciesPanel()
+        if self.panelsVisible then
+            self:renderAllMapModsPanel()
+            self:renderActiveMapModsPanel()
+            self:renderDependenciesPanel()
+        end
     end
 
 -- Search Bar --
@@ -140,20 +142,22 @@ function MapModChecker_UI:createChildren()
         end     
 
     -- Scroll List 1 --
-        local listWidth = 550
-        local listX = getCore():getScreenWidth() - listWidth - 60
-        local listY = 120
-        local listHeight = getCore():getScreenHeight() - 140 - 45
+        local listWidth = 420
+        local listX = getCore():getScreenWidth() - listWidth - 20
+        local listY = 150
+        local listHeight = getCore():getScreenHeight() - 140 - 45 - 30
 
     -- Scroll List 2 --
+        local listWidth2 = listWidth
         local listX2 = listX - listWidth - 20
-        local listHeight2 = (listHeight / 2) + 250
+        local listHeight2 = (listHeight * 3 / 5) - 60
         local listY2 = listY
 
     -- Scroll List 3 --
+        local listWidth3 = listWidth
         local listX3 = listX2
         local listY3 = listY2 + listHeight2 + 55
-        local listHeight3 = (listHeight2 / 2) - 120
+        local listHeight3 = listHeight * 2 / 5
     
     -- Clear Search Bar Button --
         self.searchButton = ISButton:new(listX + (listWidth - 100), listY - 50, 100, 35, "Clear", self, function()
@@ -165,7 +169,7 @@ function MapModChecker_UI:createChildren()
         self:addChild(self.searchButton)
 
     -- Search Bar --
-        self.searchBar = ISTextEntryBox:new("", listX, listY - 50, 440, 35)
+        self.searchBar = ISTextEntryBox:new("", listX, listY - 50, 315, 35)
         self.searchBar:initialise()
         self.searchBar:instantiate()
         self.searchBar.onTextChange = function(entry)
@@ -179,8 +183,7 @@ function MapModChecker_UI:createChildren()
             self:removeFromUIManager()
         end
     
-        self.closeButton = ISButton:new(self.width - 40, 10, 30, 30, "X", self, self.onClose)
-        self.closeButton:initialise()
+        self.closeButton = ISButton:new(listX + listWidth - 30, 10, 30, 30, "X", self, self.onClose)        self.closeButton:initialise()
         self.closeButton:instantiate()
         self.closeButton.tooltip = "Save changes made to mods and go back to the main menu."
         self:addChild(self.closeButton)    
@@ -190,13 +193,53 @@ function MapModChecker_UI:createChildren()
         local buttonSpacing = 10
         local buttonWidth = (totalButtonAreaWidth - ((numberOfButtons - 1) * buttonSpacing)) / numberOfButtons
 
-    -- Discard Button --
-        self.discardButton = ISButton:new(self.width - 182, 10, 70, 30, "Discard Changes", self, MapModChecker_UI.onDiscard)  -- Adjust the width and X position as needed
+    -- Discard Changes Button
+        local buttonSpacing = 5
+        local discardButtonX = self.closeButton:getX() - 70 - buttonSpacing - 30
+        
+        self.discardButton = ISButton:new(discardButtonX, 10, 70, 30, "Discard Changes", self, MapModChecker_UI.onDiscard)
         self.discardButton:initialise()
         self.discardButton:instantiate()
         self.discardButton:setFont(UIFont.Small)
         self.discardButton.tooltip = "Discard changes made to mods and go back to the main menu."
         self:addChild(self.discardButton)
+
+    -- Increase Grid Button
+        local increaseGridButtonX = discardButtonX - 70 - buttonSpacing - 25
+
+        self.increaseGridButton = ISButton:new(increaseGridButtonX, 10, 90, 30, "Increase Grid", self, function()
+            if self.isGridExpanded then
+                self.overlayBackground:setVisible(false)
+                self.increaseGridButton:setTitle("Increase Grid")
+                self.isGridExpanded = false
+                self.panelsVisible = true
+            else
+                self:IncreaseGrid()
+                self.increaseGridButton:setTitle("Decrease Grid")
+                self.isGridExpanded = true
+            end
+        end)
+        self.increaseGridButton:initialise()
+        self.increaseGridButton:instantiate()
+        self.increaseGridButton:setFont(UIFont.Small)
+        self.increaseGridButton.tooltip = "Increase the size of the grid by hiding the scroll lists."
+        self:addChild(self.increaseGridButton)
+
+        function MapModChecker_UI:IncreaseGrid()
+            if not self.overlayBackground then
+                self.overlayBackground = ISPanel:new(0, 0, getCore():getScreenWidth(), getCore():getScreenHeight())
+                self.overlayBackground:initialise()
+                self.overlayBackground.backgroundColor = {r=0, g=0, b=0, a=1}
+                self:addChild(self.overlayBackground)
+            end
+            self.overlayBackground:setVisible(true)
+            self.panelsVisible = false
+
+            self:addChild(self.increaseGridButton)
+            self:addChild(self.discardButton)
+            self:addChild(self.closeButton)
+        end
+
 
     -- Select All Subscribed Button --
         local selectsubscribedButtonX = listX2
@@ -510,7 +553,7 @@ function MapModChecker_UI:createChildren()
 
             self:drawRect(buttonX, buttonY, buttonWidth, buttonHeight, 1, 0, 0, 0)
             self:drawRectBorder(buttonX, buttonY, buttonWidth, buttonHeight, 1, 1, 1, 1)
-            self:drawTextCentre(buttonLabel, buttonX + buttonWidth / 2, buttonY, 1, 1, 1, 1, UIFont.Small)
+            self:drawTextCentre(buttonLabel, buttonX + buttonWidth / 2, buttonY + 3, 1, 1, 1, 1, UIFont.Small)
 
             return y + self.itemheight + 5
         end
@@ -611,7 +654,7 @@ function MapModChecker_UI:createChildren()
             -- Draw the "On/Off" button with the correct label
             self:drawRect(buttonX, buttonY, buttonWidth, buttonHeight, 1, 0, 0, 0)
             self:drawRectBorder(buttonX, buttonY, buttonWidth, buttonHeight, 1, 1, 1, 1)
-            self:drawTextCentre(buttonLabel, buttonX + buttonWidth / 2, buttonY, 1, 1, 1, 1, UIFont.Small)
+            self:drawTextCentre(buttonLabel, buttonX + buttonWidth / 2, buttonY + 3, 1, 1, 1, 1, UIFont.Small)
 
             return y + self.itemheight + 5
         end
@@ -722,142 +765,163 @@ function MapModChecker_UI:createChildren()
             local screenWidth = getCore():getScreenWidth()
             local screenHeight = getCore():getScreenHeight()
             
-            local listX2 = screenWidth - 550 - 60 - 550 - 20
-            local availableWidth = listX2 - 40
-            local availableHeight = screenHeight * 0.95
-        
             local gridRows = 64
             local gridCols = 64
+            local availableHeight = screenHeight * 0.98
+            local availableWidth
+    
+        -- Toggleable grid size
+            if self.isGridExpanded then
+                local aspectRatio = gridCols / gridRows
+                availableWidth = availableHeight * aspectRatio
+            else
+                availableWidth = screenWidth - 900
+            end
         
             local cellSize = math.min(availableWidth / gridCols, availableHeight / gridRows)
-        
             local gridWidth = cellSize * gridCols
             local gridHeight = cellSize * gridRows
         
-            local gridStartX = 20
+            local gridStartX = 10
             local gridStartY = (screenHeight - gridHeight) / 2
-
-    -- Check overlapping cells --
-        local cellTooltips = {}
-
-    -- Grid Background --
-        self:drawRect(gridStartX, gridStartY, gridWidth, gridHeight, 0.5, 0, 0, 0)
-
-    -- Clear tooltip when not hovering --
-        self.tooltip = nil
-
-    -- Highlight cells --
-        for mapName, mapData in pairs(MapModChecker_DB) do
-            if self.selectedMaps[mapName] then
-                for _, cellData in ipairs(mapData.cells) do
-                    local cellKey = cellData.row .. "_" .. cellData.col
-                    if not cellTooltips[cellKey] then
-                        cellTooltips[cellKey] = {color = {0.5, 0, 0.5}, tooltips = {}}  -- Purple for map mods with no conflicts
-                    end
-                    table.insert(cellTooltips[cellKey].tooltips, mapName)
-
-                    -- Adjust color logic
-                    if mapName:find("Ohio River") then
-                        cellTooltips[cellKey].color = {0, 0, 1}  -- Blue for Ohio River
-                    elseif mapName:find("Vanilla:") then
-                        cellTooltips[cellKey].color = {0, 1, 0}  -- Green for Vanilla
-                    else
-                        -- Check for conflicts
-                        if #cellTooltips[cellKey].tooltips > 1 then
-                            local hasVanillaConflict = false
-                            local nonVanillaCount = 0
-
-                            for _, conflictingMapName in ipairs(cellTooltips[cellKey].tooltips) do
-                                if conflictingMapName:find("Vanilla:") then
-                                    hasVanillaConflict = true
-                                else
-                                    nonVanillaCount = nonVanillaCount + 1
+    
+        -- Check overlapping cells --
+            local cellTooltips = {}
+    
+        -- Grid Background --
+            self:drawRect(gridStartX, gridStartY, gridWidth, gridHeight, 0.5, 0, 0, 0)
+    
+        -- Clear tooltip when not hovering --
+            self.tooltip = nil
+    
+        -- Highlight cells --
+            for mapName, mapData in pairs(MapModChecker_DB) do
+                if self.selectedMaps[mapName] then
+                    for _, cellData in ipairs(mapData.cells) do
+                        local cellKey = cellData.row .. "_" .. cellData.col
+                        if not cellTooltips[cellKey] then
+                            cellTooltips[cellKey] = {color = {0.5, 0, 0.5}, tooltips = {}}  -- Purple for map mods with no conflicts
+                        end
+                        table.insert(cellTooltips[cellKey].tooltips, mapName)
+        
+                        -- Adjust color logic
+                        if mapName:find("Ohio River") then
+                            cellTooltips[cellKey].color = {0, 0, 1}  -- Blue for Ohio River
+                        elseif mapName:find("Vanilla:") then
+                            cellTooltips[cellKey].color = {0, 1, 0}  -- Green for Vanilla
+                        else
+                            -- Check for conflicts
+                            if #cellTooltips[cellKey].tooltips > 1 then
+                                local hasVanillaConflict = false
+                                local nonVanillaCount = 0
+        
+                                for _, conflictingMapName in ipairs(cellTooltips[cellKey].tooltips) do
+                                    if conflictingMapName:find("Vanilla:") then
+                                        hasVanillaConflict = true
+                                    else
+                                        nonVanillaCount = nonVanillaCount + 1
+                                    end
+                                end
+        
+                                if hasVanillaConflict and nonVanillaCount > 1 then
+                                    cellTooltips[cellKey].color = {1, 0, 0}  -- Red for conflicts involving Vanilla and multiple mods
+                                elseif hasVanillaConflict then
+                                    cellTooltips[cellKey].color = {1, 1, 0}  -- Yellow for conflicts with Vanilla
+                                elseif nonVanillaCount > 1 then
+                                    cellTooltips[cellKey].color = {1, 0, 0}  -- Red for conflicts between multiple non-Vanilla maps
                                 end
                             end
-
-                            if hasVanillaConflict and nonVanillaCount > 1 then
-                                cellTooltips[cellKey].color = {1, 0, 0}  -- Red for conflicts involving Vanilla and multiple mods
-                            elseif hasVanillaConflict then
-                                cellTooltips[cellKey].color = {1, 1, 0}  -- Yellow for conflicts with Vanilla
-                            elseif nonVanillaCount > 1 then
-                                cellTooltips[cellKey].color = {1, 0, 0}  -- Red for conflicts between multiple non-Vanilla maps
+                        end
+                    end
+                end
+            end
+    
+        -- Grid overlay --
+            for row = 0, gridRows - 1 do
+                for col = 0, gridCols - 1 do
+                    local cellX = gridStartX + (col * cellSize)
+                    local cellY = gridStartY + (row * cellSize)
+        
+                    self:drawRectBorder(cellX, cellY, cellSize, cellSize, 0.5, 0.75, 0.75, 0.75)
+                end
+            end
+    
+        -- Highlights below grid overlay --
+            for cellKey, cellInfo in pairs(cellTooltips) do
+                local row, col = cellKey:match("(%d+)_(%d+)")
+                if row and col then
+                    row, col = tonumber(row), tonumber(col)
+        
+                    if row and col then
+                        local cellX = gridStartX + ((row + 1) * cellSize)
+                        local cellY = gridStartY + ((col + 1) * cellSize)
+        
+                        self:drawRect(cellX, cellY, cellSize, cellSize, 0.5, cellInfo.color[1], cellInfo.color[2], cellInfo.color[3])
+        
+                        -- Tooltip --
+                        if self:isMouseOverCell(cellX, cellY, cellSize) then
+                            local tooltipText = table.concat(cellInfo.tooltips, "\n")
+                            local tooltipWidth = getTextManager():MeasureStringX(UIFont.Small, tooltipText) + 10
+                            local tooltipHeight = (#cellInfo.tooltips * 20) + 10
+        
+                            self.tooltip = {x = cellX + cellSize + 5, y = cellY, width = tooltipWidth, height = tooltipHeight, text = tooltipText}
+                        end
+                    end
+                end
+            end
+    
+        -- Row / Column Labels --
+            for row = 0, gridRows - 1 do
+                for col = 0, gridCols - 1 do
+                    if row == 0 or col == 0 then
+                        local cellX = gridStartX + (col * cellSize)
+                        local cellY = gridStartY + (row * cellSize)
+        
+                        self:drawRect(cellX, cellY, cellSize, cellSize, 0.6, 1, 1, 1)
+        
+                        local text = ""
+                        if row == 0 and col > 0 then
+                            text = tostring(col - 1)
+                        elseif col == 0 and row > 0 then
+                            text = tostring(row - 1)
+                        end
+        
+                        if text ~= "" then
+                            local xOffset = #text == 1 and (cellSize / 3) or (cellSize / 4.5)
+                            local adjustedX = col == 0 and (cellX - 2) or cellX
+                            local adjustedY = row == 0 and (cellY - 2) or (cellY - 1)
+        
+                            self:drawText(text, adjustedX + xOffset, adjustedY, 0, 0, 0, 1, UIFont.VerySmall)
                             end
                         end
                     end
                 end
             end
-        end
-
-    -- Grid overlay --
-        for row = 0, gridRows - 1 do
-            for col = 0, gridCols - 1 do
-                local cellX = gridStartX + (col * cellSize)
-                local cellY = gridStartY + (row * cellSize)
-
-                self:drawRectBorder(cellX, cellY, cellSize, cellSize, 0.5, 0.75, 0.75, 0.75)
-            end
-        end
-
-    -- Highlights below grid overlay --
-        for cellKey, cellInfo in pairs(cellTooltips) do
-            local row, col = cellKey:match("(%d+)_(%d+)")
-            if row and col then
-                row, col = tonumber(row), tonumber(col)
-
-                if row and col then
-                    local cellX = gridStartX + ((row + 1) * cellSize)
-                    local cellY = gridStartY + ((col + 1) * cellSize)
-
-                    self:drawRect(cellX, cellY, cellSize, cellSize, 0.5, cellInfo.color[1], cellInfo.color[2], cellInfo.color[3])
-
-                    -- Tooltip --
-                    if self:isMouseOverCell(cellX, cellY, cellSize) then
-                        local tooltipText = table.concat(cellInfo.tooltips, "\n")
-                        local tooltipWidth = getTextManager():MeasureStringX(UIFont.Small, tooltipText) + 10
-                        local tooltipHeight = (#cellInfo.tooltips * 20) + 10
-
-                        self.tooltip = {x = cellX + cellSize + 5, y = cellY, width = tooltipWidth, height = tooltipHeight, text = tooltipText}
-                    end
-                end
-            end
-        end
-
-    -- Row / Column Labels --
-        for row = 0, gridRows - 1 do
-            for col = 0, gridCols - 1 do
-                if row == 0 or col == 0 then
-                    local cellX = gridStartX + (col * cellSize)
-                    local cellY = gridStartY + (row * cellSize)
-
-                    self:drawRect(cellX, cellY, cellSize, cellSize, 0.6, 1, 1, 1)
-
-                    local text = ""
-                    if row == 0 and col > 0 then
-                        text = tostring(col - 1)
-                    elseif col == 0 and row > 0 then
-                        text = tostring(row - 1)
-                    end
-
-                    if text ~= "" then
-                        local xOffset = #text == 1 and (cellSize / 3) or (cellSize / 4.5)
-                        local adjustedX = col == 0 and (cellX - 2) or cellX
-                        local adjustedY = row == 0 and (cellY - 2) or (cellY - 1)
-
-                        self:drawText(text, adjustedX + xOffset, adjustedY, 0, 0, 0, 1, UIFont.VerySmall)
-                        end
-                    end
-                end
-            end
-        end
 
     -- Tooltip --
         function MapModChecker_UI:renderTooltip()
             if self.tooltip then
-                self:drawRect(self.tooltip.x, self.tooltip.y, self.tooltip.width, self.tooltip.height, 1, 0, 0, 0)
-                self:drawRectBorder(self.tooltip.x, self.tooltip.y, self.tooltip.width, self.tooltip.height, 1, 1, 1, 1)
-                self:drawText(self.tooltip.text, self.tooltip.x + 5, self.tooltip.y + 5, 1, 1, 1, 1, UIFont.Small)
+                -- Trim any extra blank lines from the tooltip text
+                local cleanText = self.tooltip.text:gsub("\n+", "\n"):gsub("^\n", ""):gsub("\n$", "")
+        
+                -- Recalculate tooltip height based on cleaned text
+                local tooltipLines = {}
+                for line in cleanText:gmatch("[^\n]+") do
+                    table.insert(tooltipLines, line)
+                end
+                local tooltipHeight = (#tooltipLines * 20) + 10
+        
+                -- Draw tooltip box and text
+                self:drawRect(self.tooltip.x, self.tooltip.y, self.tooltip.width, tooltipHeight, 1, 0, 0, 0)
+                self:drawRectBorder(self.tooltip.x, self.tooltip.y, self.tooltip.width, tooltipHeight, 1, 1, 1, 1)
+                local yOffset = 5
+                for _, line in ipairs(tooltipLines) do
+                    self:drawText(line, self.tooltip.x + 5, self.tooltip.y + yOffset, 1, 1, 1, 1, UIFont.Small)
+                    yOffset = yOffset + 20
+                end
             end
         end
+        
 
 
 -- Panels
@@ -865,7 +929,7 @@ function MapModChecker_UI:createChildren()
         function MapModChecker_UI:renderAllMapModsPanel()
             local panelX = self.scrollListBox:getX()
             local panelY = self.scrollListBox:getY() - 90  
-            local panelWidth = self.scrollListBox2:getWidth() - 150
+            local panelWidth = self.scrollListBox2:getWidth() - 300
             local panelHeight = 35
 
             self:drawRect(panelX, panelY, panelWidth, panelHeight, 0.5, 0, 0, 0)
